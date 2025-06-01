@@ -14,6 +14,7 @@ import type {
   FunctionReference,
 } from "convex/server";
 import type * as todos from "../todos.js";
+import type * as voiceNotes from "../voiceNotes.js";
 
 /**
  * A utility for referencing Convex functions in your app's API.
@@ -25,6 +26,7 @@ import type * as todos from "../todos.js";
  */
 declare const fullApi: ApiFromModules<{
   todos: typeof todos;
+  voiceNotes: typeof voiceNotes;
 }>;
 export declare const api: FilterApi<
   typeof fullApi,

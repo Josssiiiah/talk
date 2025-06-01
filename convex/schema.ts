@@ -7,4 +7,9 @@ export default defineSchema({
     isCompleted: v.boolean(),
     createdAt: v.number(),
   }),
+  voiceNotes: defineTable({
+    transcript: v.string(),
+    audioUri: v.string(),
+    createdAt: v.number(),
+  }),
 });
