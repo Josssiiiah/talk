@@ -13,6 +13,8 @@ import type {
   FilterApi,
   FunctionReference,
 } from "convex/server";
+import type * as agent from "../agent.js";
+import type * as folders from "../folders.js";
 import type * as todos from "../todos.js";
 import type * as voiceNotes from "../voiceNotes.js";
 
@@ -25,6 +27,8 @@ import type * as voiceNotes from "../voiceNotes.js";
  * ```
  */
 declare const fullApi: ApiFromModules<{
+  agent: typeof agent;
+  folders: typeof folders;
   todos: typeof todos;
   voiceNotes: typeof voiceNotes;
 }>;
