@@ -28,7 +28,7 @@ export default function TabLayout() {
       }}
     >
       <Tabs.Screen
-        name="index"
+        name="chat"
         options={{
           title: "Chat",
           tabBarIcon: ({ color }) => (
@@ -43,12 +43,6 @@ export default function TabLayout() {
           tabBarIcon: ({ color }) => (
             <IconSymbol size={28} name="doc.text.fill" color={color} />
           ),
-        }}
-      />
-      <Tabs.Screen
-        name="voice"
-        options={{
-          href: null, // Hide from tab bar since voice is integrated into notes
         }}
       />
     </Tabs>
