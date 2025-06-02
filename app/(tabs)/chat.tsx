@@ -578,6 +578,54 @@ export default function ChatScreen() {
                   }}
                 />
               ))}
+
+              {/* Particle dots in radial pattern - similar to transcribing effect */}
+              {Array.from({ length: 8 }).map((_, i) => (
+                <Animated.View
+                  key={`recording-dot-${i}`}
+                  style={{
+                    position: "absolute",
+                    top: "50%",
+                    left: "50%",
+                    width: 4,
+                    height: 4,
+                    marginTop: -2,
+                    marginLeft: -2,
+                    borderRadius: 2,
+                    backgroundColor: "rgba(0, 0, 0, 0.08)",
+                    opacity: recordingPulse.interpolate({
+                      inputRange: [1, 1.6],
+                      outputRange: [0.4, 0.9],
+                    }),
+                    transform: [
+                      {
+                        translateX: energyPulse.interpolate({
+                          inputRange: [0, 1],
+                          outputRange: [
+                            Math.cos((i * 45 * Math.PI) / 180) * 70,
+                            Math.cos((i * 45 * Math.PI) / 180) * 110,
+                          ],
+                        }),
+                      },
+                      {
+                        translateY: energyPulse.interpolate({
+                          inputRange: [0, 1],
+                          outputRange: [
+                            Math.sin((i * 45 * Math.PI) / 180) * 70,
+                            Math.sin((i * 45 * Math.PI) / 180) * 110,
+                          ],
+                        }),
+                      },
+                      {
+                        scale: recordingPulse.interpolate({
+                          inputRange: [1, 1.6],
+                          outputRange: [0.6, 1.3],
+                        }),
+                      },
+                    ],
+                  }}
+                />
+              ))}
             </View>
 
             {/* Large tap area - covers most of the screen center */}
@@ -593,7 +641,7 @@ export default function ChatScreen() {
             ></Pressable>
 
             {/* Refined recording text */}
-            <View className="absolute bottom-1/4 left-0 right-0 items-center pointer-events-none px-8">
+            <View className="absolute inset-0 items-center justify-center pointer-events-none px-8">
               <Animated.View
                 style={{
                   opacity: recordingPulse.interpolate({
@@ -738,7 +786,7 @@ export default function ChatScreen() {
             </View>
 
             {/* Refined text */}
-            <View className="absolute bottom-1/4 left-0 right-0 items-center px-8">
+            <View className="absolute inset-0 items-center justify-center px-8">
               <Animated.View
                 style={{
                   opacity: textGlow.interpolate({
@@ -756,6 +804,29 @@ export default function ChatScreen() {
                 >
                   Transcribing
                 </Text>
+                <View className="flex-row space-x-1.5 justify-center mb-4">
+                  {Array.from({ length: 3 }).map((_, i) => (
+                    <Animated.View
+                      key={i}
+                      style={{
+                        opacity: recordingPulse.interpolate({
+                          inputRange: [1, 1.6],
+                          outputRange: [0.4, 0.8],
+                        }),
+                        transform: [
+                          {
+                            scale: recordingPulse.interpolate({
+                              inputRange: [1, 1.6],
+                              outputRange: [0.8, 1.2],
+                            }),
+                          },
+                        ],
+                        backgroundColor: "rgba(0, 0, 0, 0.12)",
+                      }}
+                      className="w-2 h-2 rounded-full"
+                    />
+                  ))}
+                </View>
 
                 <Text
                   style={{
