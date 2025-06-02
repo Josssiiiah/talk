@@ -5,7 +5,7 @@ import { useAction, useMutation, useQuery } from "convex/react";
 import { AudioModule, RecordingOptions, useAudioRecorder } from "expo-audio";
 import * as FileSystem from "expo-file-system";
 import * as Haptics from "expo-haptics";
-import { Check, Loader2, Mic, Trash2 } from "lucide-react-native";
+import { Check, Mic, Trash2 } from "lucide-react-native";
 import React, { useEffect, useRef, useState } from "react";
 import {
   Alert,
@@ -383,13 +383,13 @@ export default function ChatScreen() {
               toValue: 1,
               duration: 2000,
               easing: Easing.inOut(Easing.ease),
-              useNativeDriver: false,
+              useNativeDriver: true,
             }),
             Animated.timing(textGlow, {
               toValue: 0,
               duration: 2000,
               easing: Easing.inOut(Easing.ease),
-              useNativeDriver: false,
+              useNativeDriver: true,
             }),
           ])
         ),
@@ -515,7 +515,71 @@ export default function ChatScreen() {
       <SafeAreaView className="flex-1 items-center justify-center">
         {/* 🎤 Recording overlay */}
         {isRecording && (
-          <View className="absolute inset-0 items-center justify-center bg-background/90 z-20">
+          <View className="absolute inset-0 items-center justify-center bg-background/95 z-20">
+            {/* Expanded recording background animation */}
+            <View className="absolute inset-0">
+              {/* Extended radial lines */}
+              {Array.from({ length: 16 }).map((_, i) => (
+                <Animated.View
+                  key={`line-${i}`}
+                  style={{
+                    position: "absolute",
+                    top: "50%",
+                    left: "50%",
+                    width: 1,
+                    height: 300 + (i % 3) * 100, // Varying lengths
+                    marginTop: -(150 + (i % 3) * 50),
+                    marginLeft: -0.5,
+                    backgroundColor: `rgba(0, 0, 0, ${0.03 - (i % 3) * 0.005})`,
+                    transform: [
+                      { rotate: `${i * 22.5}deg` },
+                      {
+                        scaleY: energyPulse.interpolate({
+                          inputRange: [0, 1],
+                          outputRange: [0.7, 1.2],
+                        }),
+                      },
+                    ],
+                    opacity: energyPulse.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [0.5, 1],
+                    }),
+                  }}
+                />
+              ))}
+
+              {/* Outer expanding waves */}
+              {Array.from({ length: 3 }).map((_, i) => (
+                <Animated.View
+                  key={`wave-${i}`}
+                  style={{
+                    position: "absolute",
+                    top: "50%",
+                    left: "50%",
+                    width: 600 + i * 300,
+                    height: 600 + i * 300,
+                    marginTop: -(300 + i * 150),
+                    marginLeft: -(300 + i * 150),
+                    borderRadius: 300 + i * 150,
+                    borderWidth: 0.5,
+                    borderColor: "rgba(0, 0, 0, 0.015)",
+                    opacity: recordingPulse.interpolate({
+                      inputRange: [1, 1.6],
+                      outputRange: [0.2 - i * 0.05, 0.4 - i * 0.1],
+                    }),
+                    transform: [
+                      {
+                        scale: recordingPulse.interpolate({
+                          inputRange: [1, 1.6],
+                          outputRange: [0.9, 1.3 + i * 0.1],
+                        }),
+                      },
+                    ],
+                  }}
+                />
+              ))}
+            </View>
+
             {/* Large tap area - covers most of the screen center */}
             <Pressable
               onPress={handleCenterTap}
@@ -524,443 +588,185 @@ export default function ChatScreen() {
               className="absolute w-80 h-80 items-center justify-center"
               style={{
                 borderRadius: 160,
-                backgroundColor: isPressed
-                  ? "rgba(239, 68, 68, 0.1)"
-                  : "transparent",
+                backgroundColor: isPressed ? "transparent" : "transparent",
               }}
-            >
-              {/* Visual tap indicator ring */}
+            ></Pressable>
+
+            {/* Refined recording text */}
+            <View className="absolute bottom-1/4 left-0 right-0 items-center pointer-events-none px-8">
               <Animated.View
                 style={{
                   opacity: recordingPulse.interpolate({
                     inputRange: [1, 1.6],
-                    outputRange: [0.3, 0.6],
-                  }),
-                  transform: [
-                    {
-                      scale: recordingPulse.interpolate({
-                        inputRange: [1, 1.6],
-                        outputRange: [1, 1.1],
-                      }),
-                    },
-                  ],
-                }}
-                className="absolute w-72 h-72 rounded-full border-2 border-red-300/40 border-dashed"
-              />
-
-              {/* Secondary tap indicator */}
-              <Animated.View
-                style={{
-                  opacity: energyPulse.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: [0.2, 0.5],
+                    outputRange: [0.6, 1],
                   }),
                 }}
-                className="absolute w-60 h-60 rounded-full border border-orange-300/30"
-              />
-
-              {/* Recording ring with scale animation */}
-              <Animated.View
-                style={{
-                  transform: [
-                    {
-                      scale: isPressed
-                        ? recordingRingScale.interpolate({
-                            inputRange: [0, 1],
-                            outputRange: [0, 0.95], // Slightly smaller when pressed
-                          })
-                        : recordingRingScale,
-                    },
-                    {
-                      rotate: outerRingRotation.interpolate({
-                        inputRange: [0, 1],
-                        outputRange: ["0deg", "360deg"],
-                      }),
-                    },
-                  ],
-                }}
-                className="absolute w-64 h-64 rounded-full border-2 border-red-500/40"
+                className="items-center"
               >
-                {/* Recording dots */}
-                {Array.from({ length: 8 }).map((_, i) => (
-                  <Animated.View
-                    key={i}
-                    style={{
-                      opacity: energyPulse.interpolate({
-                        inputRange: [0, 1],
-                        outputRange: [0.3, 1],
-                      }),
-                    }}
-                  >
-                    <View
-                      className="absolute w-3 h-3 bg-red-400 rounded-full shadow-lg"
-                      style={{
-                        top: -6,
-                        left: "50%",
-                        marginLeft: -6,
-                        transform: [{ rotate: `${i * 45}deg` }],
-                        transformOrigin: "6px 132px",
-                      }}
-                    />
-                  </Animated.View>
-                ))}
-              </Animated.View>
-
-              {/* Central recording core */}
-              <Animated.View
-                style={{
-                  transform: [
-                    {
-                      scale: isPressed
-                        ? recordingPulse.interpolate({
-                            inputRange: [1, 1.6],
-                            outputRange: [0.9, 1.4], // More dramatic scale when pressed
-                          })
-                        : recordingPulse,
-                    },
-                  ],
-                }}
-                className="w-16 h-16 rounded-full bg-gradient-to-br from-red-600 via-orange-500 to-yellow-500 items-center justify-center shadow-2xl"
-              >
-                <View className="w-12 h-12 rounded-full bg-gradient-to-br from-white/30 to-transparent items-center justify-center">
-                  <View className="w-4 h-4 bg-white rounded-sm" />
-                </View>
-              </Animated.View>
-            </Pressable>
-
-            {/* Waveform visualization - outside the pressable */}
-            <View className="absolute w-80 h-20 items-center justify-center top-1/3">
-              <View className="flex-row items-end space-x-1">
-                {Array.from({ length: 12 }).map((_, i) => (
-                  <Animated.View
-                    key={i}
-                    style={{
-                      height: 20 + Math.random() * 40,
-                      animationDelay: `${i * 50}ms`,
-                      transform: [
-                        {
-                          scaleY: waveformScale.interpolate({
-                            inputRange: [0, 1],
-                            outputRange: [0.2, Math.random() * 2 + 0.5],
-                          }),
-                        },
-                      ],
-                    }}
-                    className="w-2 bg-gradient-to-t from-red-500 to-orange-400 rounded-full"
-                  />
-                ))}
-              </View>
-            </View>
-
-            {/* Energy rings - outside pressable for visual effect */}
-            <Animated.View
-              style={{
-                opacity: energyPulse,
-                transform: [
-                  {
-                    scale: energyPulse.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: [0.8, 1.4],
-                    }),
-                  },
-                ],
-              }}
-              className="absolute w-32 h-32 rounded-full border border-orange-400/50 pointer-events-none"
-            />
-            <Animated.View
-              style={{
-                opacity: energyPulse.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: [0, 0.7],
-                }),
-                transform: [
-                  {
-                    scale: energyPulse.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: [1, 1.8],
-                    }),
-                  },
-                ],
-              }}
-              className="absolute w-48 h-48 rounded-full border border-red-400/30 pointer-events-none"
-            />
-
-            {/* Recording text */}
-            <View className="absolute bottom-1/3 items-center pointer-events-none">
-              <Animated.View
-                style={{
-                  opacity: recordingPulse.interpolate({
-                    inputRange: [1, 1.6],
-                    outputRange: [0.7, 1],
-                  }),
-                }}
-              >
-                <Text className="text-xl font-bold text-red-400 mb-2 tracking-wider">
-                  RECORDING
+                <Text
+                  style={{
+                    color: "rgba(0, 0, 0, 0.5)",
+                  }}
+                  className="text-xl font-medium mb-4 tracking-wide text-center"
+                >
+                  Recording
                 </Text>
-                <View className="flex-row space-x-1 justify-center">
+                <View className="flex-row space-x-1.5 justify-center mb-4">
                   {Array.from({ length: 3 }).map((_, i) => (
                     <Animated.View
                       key={i}
                       style={{
-                        opacity: pulseAnim.interpolate({
-                          inputRange: [1, 1.3],
-                          outputRange: [0.3, 1],
+                        opacity: recordingPulse.interpolate({
+                          inputRange: [1, 1.6],
+                          outputRange: [0.4, 0.8],
                         }),
                         transform: [
                           {
-                            scale: pulseAnim.interpolate({
-                              inputRange: [1, 1.3],
+                            scale: recordingPulse.interpolate({
+                              inputRange: [1, 1.6],
                               outputRange: [0.8, 1.2],
                             }),
                           },
                         ],
+                        backgroundColor: "rgba(0, 0, 0, 0.12)",
                       }}
-                    >
-                      <View
-                        className="w-2 h-2 bg-orange-400 rounded-full"
-                        style={{ animationDelay: `${i * 200}ms` }}
-                      />
-                    </Animated.View>
+                      className="w-2 h-2 rounded-full"
+                    />
                   ))}
                 </View>
-                <Text className="text-lg text-orange-300 mt-3 font-mono tracking-widest text-center">
-                  TAP ANYWHERE TO STOP
-                </Text>
-                <Text className="text-sm text-orange-200/70 mt-1 font-mono text-center">
-                  Large tap area active
+                <Text
+                  style={{
+                    color: "rgba(0, 0, 0, 0.35)",
+                  }}
+                  className="text-base font-medium text-center"
+                >
+                  Tap anywhere to stop
                 </Text>
               </Animated.View>
             </View>
           </View>
         )}
 
-        {/* 🚀 Futuristic processing overlay */}
+        {/* 🚀 Refined processing overlay */}
         {isProcessing && (
-          <View className="absolute inset-0 items-center justify-center bg-background/95 z-20">
-            {/* Background hologram grid */}
-            <Animated.View
-              style={{ opacity: hologramOpacity }}
-              className="absolute inset-0"
-            >
-              <View className="absolute inset-0 opacity-20">
-                {/* Horizontal lines */}
-                {Array.from({ length: 20 }).map((_, i) => (
-                  <View
-                    key={`h-${i}`}
-                    className="absolute h-px bg-cyan-400"
-                    style={{
-                      width: "100%",
-                      top: i * 40,
-                    }}
-                  />
-                ))}
-                {/* Vertical lines */}
-                {Array.from({ length: 10 }).map((_, i) => (
-                  <View
-                    key={`v-${i}`}
-                    className="absolute w-px bg-cyan-400"
-                    style={{
-                      height: "100%",
-                      left: i * 40,
-                    }}
-                  />
-                ))}
-              </View>
-            </Animated.View>
-
-            {/* Outer ring */}
-            <Animated.View
-              style={{
-                transform: [
-                  {
-                    rotate: outerRingRotation.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: ["0deg", "360deg"],
-                    }),
-                  },
-                ],
-                borderColor: "rgba(168, 85, 247, 0.3)", // purple
-              }}
-              className="absolute w-80 h-80 rounded-full border-2"
-            >
-              {/* Outer ring dots */}
+          <View className="absolute inset-0 items-center justify-center bg-background/96 z-20">
+            {/* Radial geometric transcription background animation */}
+            <View className="absolute inset-0">
+              {/* Radial lines for processing - similar to recording but different timing */}
               {Array.from({ length: 12 }).map((_, i) => (
                 <Animated.View
-                  key={i}
-                  style={{
-                    backgroundColor: "rgb(196, 181, 253)", // purple
-                    top: -4,
-                    left: "50%",
-                    marginLeft: -4,
-                    transform: [{ rotate: `${i * 30}deg` }],
-                    transformOrigin: "4px 160px",
-                  }}
-                  className="absolute w-2 h-2 rounded-full"
-                />
-              ))}
-            </Animated.View>
-
-            {/* Middle ring */}
-            <Animated.View
-              style={{
-                transform: [
-                  {
-                    rotate: middleRingRotation.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: ["360deg", "0deg"], // Counter-clockwise
-                    }),
-                  },
-                ],
-                borderColor: "rgba(34, 211, 238, 0.5)", // cyan
-              }}
-              className="absolute w-60 h-60 rounded-full border-2"
-            >
-              {/* Middle ring segments */}
-              {Array.from({ length: 8 }).map((_, i) => (
-                <Animated.View
-                  key={i}
-                  style={{
-                    backgroundColor: "rgb(34, 211, 238)", // cyan
-                    top: -16,
-                    left: "50%",
-                    marginLeft: -2,
-                    transform: [{ rotate: `${i * 45}deg` }],
-                    transformOrigin: "2px 136px",
-                  }}
-                  className="absolute w-1 h-8"
-                />
-              ))}
-            </Animated.View>
-
-            {/* Inner ring */}
-            <Animated.View
-              style={{
-                transform: [
-                  {
-                    rotate: innerRingRotation.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: ["0deg", "360deg"],
-                    }),
-                  },
-                ],
-                borderColor: "rgba(236, 72, 153, 0.6)", // pink
-              }}
-              className="absolute w-40 h-40 rounded-full border-4"
-            />
-
-            {/* Floating particles */}
-            <Animated.View style={{ opacity: particleOpacity }}>
-              {particleAnims.map((particle, index) => (
-                <Animated.View
-                  key={index}
+                  key={`process-line-${i}`}
                   style={{
                     position: "absolute",
+                    top: "50%",
+                    left: "50%",
+                    width: 1.5,
+                    height: 250 + (i % 4) * 75, // Varying lengths
+                    marginTop: -(125 + (i % 4) * 37.5),
+                    marginLeft: -0.75,
+                    backgroundColor: `rgba(0, 0, 0, ${0.04 - (i % 4) * 0.008})`,
                     transform: [
+                      { rotate: `${i * 30}deg` },
                       {
-                        rotate: particle.rotation.interpolate({
-                          inputRange: [0, 1],
-                          outputRange: ["0deg", "360deg"],
+                        scaleY: coreScale.interpolate({
+                          inputRange: [1, 1.4],
+                          outputRange: [0.6, 1.3],
                         }),
                       },
-                      { scale: particle.scale },
+                      {
+                        rotateZ: outerRingRotation.interpolate({
+                          inputRange: [0, 1],
+                          outputRange: [`${i * 30}deg`, `${i * 30 + 360}deg`],
+                        }),
+                      },
                     ],
-                    opacity: particle.opacity,
+                    opacity: textGlow.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [0.3, 0.8],
+                    }),
                   }}
-                >
-                  <Animated.View
-                    style={{
-                      width: 12,
-                      height: 12,
-                      borderRadius: 6,
-                      backgroundColor: "rgb(251, 191, 36)", // yellow-orange
-                      transform: [
-                        {
-                          translateX:
-                            Math.cos((index * 45 * Math.PI) / 180) * 100,
-                        },
-                        {
-                          translateY:
-                            Math.sin((index * 45 * Math.PI) / 180) * 100,
-                        },
-                      ],
-                      shadowColor: "rgb(251, 191, 36)",
-                      shadowOpacity: 0.8,
-                      shadowRadius: 4,
-                    }}
-                  />
-                </Animated.View>
+                />
               ))}
-            </Animated.View>
 
-            {/* Central core */}
-            <Animated.View
-              style={{
-                transform: [{ scale: coreScale }],
-                backgroundColor: "rgb(147, 51, 234)", // purple
-              }}
-              className="w-20 h-20 rounded-full items-center justify-center shadow-2xl"
-            >
-              <View className="w-16 h-16 rounded-full bg-gradient-to-br from-white/20 to-transparent items-center justify-center">
-                <Loader2 size={32} color="#fff" className="animate-spin" />
-              </View>
-            </Animated.View>
+              {/* Geometric dots in radial pattern */}
+              {Array.from({ length: 8 }).map((_, i) => (
+                <Animated.View
+                  key={`process-dot-${i}`}
+                  style={{
+                    position: "absolute",
+                    top: "50%",
+                    left: "50%",
+                    width: 4,
+                    height: 4,
+                    marginTop: -2,
+                    marginLeft: -2,
+                    borderRadius: 2,
+                    backgroundColor: "rgba(0, 0, 0, 0.06)",
+                    opacity: particleOpacity.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [0.3, 0.8],
+                    }),
+                    transform: [
+                      {
+                        translateX: hologramOpacity.interpolate({
+                          inputRange: [0.2, 0.8],
+                          outputRange: [
+                            Math.cos((i * 45 * Math.PI) / 180) * 80,
+                            Math.cos((i * 45 * Math.PI) / 180) * 120,
+                          ],
+                        }),
+                      },
+                      {
+                        translateY: hologramOpacity.interpolate({
+                          inputRange: [0.2, 0.8],
+                          outputRange: [
+                            Math.sin((i * 45 * Math.PI) / 180) * 80,
+                            Math.sin((i * 45 * Math.PI) / 180) * 120,
+                          ],
+                        }),
+                      },
+                      {
+                        scale: textGlow.interpolate({
+                          inputRange: [0, 1],
+                          outputRange: [0.5, 1.2],
+                        }),
+                      },
+                    ],
+                  }}
+                />
+              ))}
+            </View>
 
-            {/* Glowing text */}
-            <Animated.View
-              style={{
-                shadowColor: "rgb(34, 211, 238)", // cyan
-                shadowOpacity: textGlow.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: [0.5, 1],
-                }),
-                shadowRadius: textGlow.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: [10, 20],
-                }),
-              }}
-              className="absolute top-2/3 items-center"
-            >
-              <Animated.Text
+            {/* Refined text */}
+            <View className="absolute bottom-1/4 left-0 right-0 items-center px-8">
+              <Animated.View
                 style={{
-                  color: "rgb(255, 255, 255)", // white
+                  opacity: textGlow.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [0.6, 1],
+                  }),
                 }}
-                className="text-2xl font-bold mb-2 tracking-wider"
+                className="items-center"
               >
-                TRANSCRIBING
-              </Animated.Text>
-              <View className="flex-row space-x-1">
-                {Array.from({ length: 3 }).map((_, i) => (
-                  <Animated.View
-                    key={i}
-                    style={{
-                      opacity: pulseAnim.interpolate({
-                        inputRange: [1, 1.3],
-                        outputRange: [0.3, 1],
-                      }),
-                      transform: [
-                        {
-                          scale: pulseAnim.interpolate({
-                            inputRange: [1, 1.3],
-                            outputRange: [0.8, 1.2],
-                          }),
-                        },
-                      ],
-                      backgroundColor: "rgb(34, 211, 238)", // cyan
-                    }}
-                    className="w-2 h-2 rounded-full"
-                  />
-                ))}
-              </View>
-              <Animated.Text
-                style={{
-                  color: "rgb(103, 232, 249)", // light cyan
-                }}
-                className="text-sm mt-2 font-mono tracking-widest"
-              >
-                NEURAL PROCESSING
-              </Animated.Text>
-            </Animated.View>
+                <Text
+                  style={{
+                    color: "rgba(0, 0, 0, 0.5)",
+                  }}
+                  className="text-xl font-medium mb-4 tracking-wide text-center"
+                >
+                  Transcribing
+                </Text>
+
+                <Text
+                  style={{
+                    color: "rgba(0, 0, 0, 0.35)",
+                  }}
+                  className="text-base font-medium text-center"
+                >
+                  Processing audio...
+                </Text>
+              </Animated.View>
+            </View>
           </View>
         )}
 
@@ -970,12 +776,12 @@ export default function ChatScreen() {
             <Text className="text-sm uppercase font-semibold text-muted-foreground mb-2">
               {reviewItem.type === "todo" ? "To-Do" : "Voice Note"}
             </Text>
-            <Text className="text-base text-foreground mb-6">
+            <Text className="text-base text-foreground mb-6 text-center px-4">
               {reviewItem.type === "todo"
                 ? (reviewItem.item as Todo).text
                 : (reviewItem.item as VoiceNote).content}
             </Text>
-            <View className="flex-row justify-between">
+            <View className="flex-row justify-center space-x-4">
               <Pressable
                 onPress={async () => {
                   if (reviewItem.type === "voiceNote") {
@@ -987,14 +793,14 @@ export default function ChatScreen() {
                   }
                   setReviewItem(null);
                 }}
-                className="flex-1 mr-2 h-12 rounded-full bg-destructive items-center justify-center flex-row"
+                className="flex-1 max-w-[140px] h-12 rounded-full bg-destructive items-center justify-center flex-row"
               >
                 <Trash2 size={20} color="#fff" />
                 <Text className="text-white font-medium ml-2">Discard</Text>
               </Pressable>
               <Pressable
                 onPress={() => setReviewItem(null)}
-                className="flex-1 ml-2 h-12 rounded-full bg-primary items-center justify-center flex-row"
+                className="flex-1 max-w-[140px] h-12 rounded-full bg-primary items-center justify-center flex-row"
               >
                 <Check size={20} color="#fff" />
                 <Text className="text-white font-medium ml-2">Keep</Text>
@@ -1003,27 +809,34 @@ export default function ChatScreen() {
           </View>
         )}
 
-        {/* Record button */}
-        <Animated.View
-          style={{
-            transform: [{ scale: pulseAnim }],
-            opacity: isProcessing ? 0.3 : 1,
-          }}
-        >
-          <Pressable
-            onPress={toggleRecording}
-            disabled={isProcessing}
-            className={`w-24 h-24 rounded-full items-center justify-center shadow-2xl ${
-              isRecording ? "bg-destructive" : "bg-primary"
-            }`}
-          >
-            {isRecording ? (
-              <View className="w-6 h-6 bg-white rounded-sm" />
-            ) : (
-              <Mic size={40} color="white" />
-            )}
-          </Pressable>
-        </Animated.View>
+        {/* Refined record button */}
+        {!isProcessing && (
+          <View className="flex-1 items-center justify-center">
+            <Animated.View
+              style={{
+                transform: [{ scale: pulseAnim }],
+                opacity: isRecording ? 0.3 : 1,
+              }}
+            >
+              <Pressable
+                onPress={toggleRecording}
+                disabled={isRecording}
+                style={{
+                  backgroundColor: isRecording
+                    ? "rgba(0, 0, 0, 0.1)"
+                    : "rgba(0, 0, 0, 0.08)",
+                }}
+                className="w-20 h-20 rounded-full items-center justify-center"
+              >
+                {isRecording ? (
+                  <></>
+                ) : (
+                  <Mic size={24} color="rgba(0, 0, 0, 0.5)" />
+                )}
+              </Pressable>
+            </Animated.View>
+          </View>
+        )}
       </SafeAreaView>
     </View>
   );
