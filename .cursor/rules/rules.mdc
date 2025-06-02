@@ -3,4 +3,4 @@ description:
 globs: 
 alwaysApply: true
 ---
-install using bunx, not npx
+If I ask you a question related specifically to a framework or a library, use the context 7 MCP tool to find more information about said framework or library. 
