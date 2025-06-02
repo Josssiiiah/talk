@@ -47,9 +47,9 @@ export default function NotesScreen() {
   );
 
   // Convex hooks
-  const notes = useQuery(api.voiceNotes.list) ?? [];
-  const todos = useQuery(api.todos.list) ?? [];
-  const folders = useQuery(api.folders.list) ?? [];
+  const notes = (useQuery(api.voiceNotes.list) ?? []) as VoiceNote[];
+  const todos = (useQuery(api.todos.list) ?? []) as Todo[];
+  const folders = (useQuery(api.folders.list) ?? []) as FolderType[];
 
   const deleteVoiceNote = useMutation(api.voiceNotes.deleteVoiceNote);
   const toggleTodo = useMutation(api.todos.toggleTodo);

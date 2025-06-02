@@ -1,15 +1,17 @@
 import { v } from "convex/values";
-import { mutation, query } from "./_generated/server";
+import { internalMutation, mutation, query } from "./_generated/server";
 
-// Get all voice notes (most recent first)
-export const getVoiceNotes = query({
+// List all voice notes (most recent first)
+export const list = query({
   args: {},
   returns: v.array(
     v.object({
       _id: v.id("voiceNotes"),
       _creationTime: v.number(),
-      transcript: v.string(),
-      audioUri: v.string(),
+      content: v.string(),
+      type: v.union(v.literal("note"), v.literal("todo")),
+      folderId: v.optional(v.id("folders")),
+      completed: v.optional(v.boolean()),
       createdAt: v.number(),
     })
   ),
@@ -18,17 +20,14 @@ export const getVoiceNotes = query({
   },
 });
 
-// Add a new voice note
-export const addVoiceNote = mutation({
-  args: {
-    transcript: v.string(),
-    audioUri: v.string(),
-  },
+// Add a placeholder voice note
+export const addPlaceholder = mutation({
+  args: {},
   returns: v.id("voiceNotes"),
-  handler: async (ctx, args) => {
+  handler: async (ctx) => {
     const newNote = await ctx.db.insert("voiceNotes", {
-      transcript: args.transcript,
-      audioUri: args.audioUri,
+      content: "Processing...",
+      type: "note" as const,
       createdAt: Date.now(),
     });
     return newNote;
@@ -41,6 +40,25 @@ export const deleteVoiceNote = mutation({
   returns: v.null(),
   handler: async (ctx, args) => {
     await ctx.db.delete(args.id);
+    return null;
+  },
+});
+
+// Internal: finalize a placeholder note with actual content
+export const finalizeNote = internalMutation({
+  args: {
+    noteId: v.id("voiceNotes"),
+    content: v.string(),
+    type: v.literal("note"),
+    folderId: v.optional(v.id("folders")),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.noteId, {
+      content: args.content,
+      type: args.type,
+      folderId: args.folderId,
+    });
     return null;
   },
 });

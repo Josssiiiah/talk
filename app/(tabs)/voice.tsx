@@ -23,8 +23,9 @@ import { api } from "../../convex/_generated/api";
 
 interface VoiceNote {
   _id: string;
-  transcript: string;
-  audioUri: string;
+  content: string;
+  type: "note" | "todo";
+  folderId?: string;
   createdAt: number;
 }
 
@@ -53,9 +54,8 @@ export default function VoiceScreen() {
   const [isRecording, setIsRecording] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
 
-  const voiceNotes = (useQuery(api.voiceNotes.getVoiceNotes) ??
-    []) as VoiceNote[];
-  const addVoiceNote = useMutation(api.voiceNotes.addVoiceNote);
+  const voiceNotes = (useQuery(api.voiceNotes.list) ?? []) as VoiceNote[];
+  const addPlaceholder = useMutation(api.voiceNotes.addPlaceholder);
   const deleteVoiceNote = useMutation(api.voiceNotes.deleteVoiceNote);
 
   /** Request mic permission on mount */
@@ -102,7 +102,7 @@ export default function VoiceScreen() {
     setIsProcessing(true);
     try {
       const transcript = await transcribeWithOpenAI(uri);
-      await addVoiceNote({ transcript, audioUri: uri });
+      await addPlaceholder();
 
       // Clean up the local file after successful processing
       await FileSystem.deleteAsync(uri);
@@ -173,9 +173,9 @@ export default function VoiceScreen() {
     return date.toLocaleDateString();
   };
 
-  const handleDeleteVoiceNote = (id: string, transcript: string) => {
+  const handleDeleteVoiceNote = (id: string, content: string) => {
     const previewText =
-      transcript.length > 50 ? transcript.substring(0, 50) + "..." : transcript;
+      content.length > 50 ? content.substring(0, 50) + "..." : content;
 
     Alert.alert(
       "Delete Voice Note",
@@ -204,7 +204,7 @@ export default function VoiceScreen() {
           {formatDate(item.createdAt)}
         </CardDescription>
         <TouchableOpacity
-          onPress={() => handleDeleteVoiceNote(item._id, item.transcript)}
+          onPress={() => handleDeleteVoiceNote(item._id, item.content)}
           className="ml-3 p-1"
         >
           <Trash2 size={16} color="#EF4444" />
@@ -212,7 +212,7 @@ export default function VoiceScreen() {
       </CardHeader>
       <CardContent>
         <Text className="text-base leading-relaxed text-foreground">
-          {item.transcript}
+          {item.content}
         </Text>
       </CardContent>
     </Card>
