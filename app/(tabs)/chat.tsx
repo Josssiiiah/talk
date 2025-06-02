@@ -843,45 +843,90 @@ export default function ChatScreen() {
 
         {/* Review sheet */}
         {reviewItem && !isProcessing && (
-          <View className="absolute pb-12 left-0 right-0 p-6 bg-card rounded-t-3xl shadow-2xl z-10">
-            <Text className="text-sm uppercase font-semibold text-muted-foreground mb-2">
-              {reviewItem.type === "todo" ? "To-Do" : "Voice Note"}
-            </Text>
-            <Text className="text-base text-foreground mb-6 text-center px-4">
-              {reviewItem.type === "todo"
-                ? (reviewItem.item as Todo).text
-                : (reviewItem.item as VoiceNote).content}
-            </Text>
-            <View className="flex-row justify-center space-x-4">
-              <Pressable
-                onPress={async () => {
-                  if (reviewItem.type === "voiceNote") {
-                    await deleteVoiceNote({
-                      id: (reviewItem.item as VoiceNote)._id,
-                    });
-                  } else {
-                    await deleteTodo({ id: (reviewItem.item as Todo)._id });
-                  }
-                  setReviewItem(null);
-                }}
-                className="flex-1 max-w-[140px] h-12 rounded-full bg-destructive items-center justify-center flex-row"
-              >
-                <Trash2 size={20} color="#fff" />
-                <Text className="text-white font-medium ml-2">Discard</Text>
-              </Pressable>
-              <Pressable
-                onPress={() => setReviewItem(null)}
-                className="flex-1 max-w-[140px] h-12 rounded-full bg-primary items-center justify-center flex-row"
-              >
-                <Check size={20} color="#fff" />
-                <Text className="text-white font-medium ml-2">Keep</Text>
-              </Pressable>
+          <View className="absolute inset-0 items-center justify-center bg-background/98 z-30 px-8">
+            <View
+              style={{
+                backgroundColor: "rgba(255, 255, 255, 0.95)",
+                borderRadius: 24,
+                borderWidth: 1,
+                borderColor: "rgba(0, 0, 0, 0.06)",
+                shadowColor: "#000",
+                shadowOffset: { width: 0, height: 4 },
+                shadowOpacity: 0.05,
+                shadowRadius: 20,
+                elevation: 5,
+              }}
+              className="p-8 w-full max-w-sm"
+            >
+              {/* Content */}
+              <View className="items-center mb-8">
+                <Text
+                  style={{ color: "rgba(0, 0, 0, 0.4)" }}
+                  className="text-sm font-medium mb-4 tracking-wide"
+                >
+                  {reviewItem.type === "todo" ? "New Task" : "Voice Note"}
+                </Text>
+                <Text
+                  style={{ color: "rgba(0, 0, 0, 0.7)" }}
+                  className="text-base font-medium text-center leading-relaxed"
+                >
+                  {reviewItem.type === "todo"
+                    ? (reviewItem.item as Todo).text
+                    : (reviewItem.item as VoiceNote).content}
+                </Text>
+              </View>
+
+              {/* Actions */}
+              <View className="flex-row justify-center space-x-4">
+                <Pressable
+                  onPress={async () => {
+                    if (reviewItem.type === "voiceNote") {
+                      await deleteVoiceNote({
+                        id: (reviewItem.item as VoiceNote)._id,
+                      });
+                    } else {
+                      await deleteTodo({ id: (reviewItem.item as Todo)._id });
+                    }
+                    setReviewItem(null);
+                  }}
+                  style={{
+                    backgroundColor: "rgba(0, 0, 0, 0.06)",
+                    borderRadius: 20,
+                  }}
+                  className="flex-1 max-w-[130px] h-11 items-center justify-center flex-row"
+                >
+                  <Trash2 size={18} color="rgba(0, 0, 0, 0.5)" />
+                  <Text
+                    style={{ color: "rgba(0, 0, 0, 0.5)" }}
+                    className="font-medium ml-2"
+                  >
+                    Discard
+                  </Text>
+                </Pressable>
+
+                <Pressable
+                  onPress={() => setReviewItem(null)}
+                  style={{
+                    backgroundColor: "rgba(0, 0, 0, 0.08)",
+                    borderRadius: 20,
+                  }}
+                  className="flex-1 max-w-[130px] h-11 items-center justify-center flex-row"
+                >
+                  <Check size={18} color="rgba(0, 0, 0, 0.6)" />
+                  <Text
+                    style={{ color: "rgba(0, 0, 0, 0.6)" }}
+                    className="font-medium ml-2"
+                  >
+                    Keep
+                  </Text>
+                </Pressable>
+              </View>
             </View>
           </View>
         )}
 
         {/* Refined record button */}
-        {!isProcessing && (
+        {!isProcessing && !reviewItem && (
           <View className="flex-1 items-center justify-center">
             <Animated.View
               style={{
