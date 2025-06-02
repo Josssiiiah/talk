@@ -879,6 +879,23 @@ export default function ChatScreen() {
               {/* Actions */}
               <View className="flex-row justify-center space-x-4">
                 <Pressable
+                  onPress={() => setReviewItem(null)}
+                  style={{
+                    backgroundColor: "rgba(0, 0, 0, 0.08)",
+                    borderRadius: 20,
+                  }}
+                  className="flex-1 max-w-[130px] h-11 items-center justify-center flex-row"
+                >
+                  <Check size={18} color="rgba(0, 0, 0, 0.6)" />
+                  <Text
+                    style={{ color: "rgba(0, 0, 0, 0.6)" }}
+                    className="font-medium ml-2"
+                  >
+                    Keep
+                  </Text>
+                </Pressable>
+
+                <Pressable
                   onPress={async () => {
                     if (reviewItem.type === "voiceNote") {
                       await deleteVoiceNote({
@@ -901,23 +918,6 @@ export default function ChatScreen() {
                     className="font-medium ml-2"
                   >
                     Discard
-                  </Text>
-                </Pressable>
-
-                <Pressable
-                  onPress={() => setReviewItem(null)}
-                  style={{
-                    backgroundColor: "rgba(0, 0, 0, 0.08)",
-                    borderRadius: 20,
-                  }}
-                  className="flex-1 max-w-[130px] h-11 items-center justify-center flex-row"
-                >
-                  <Check size={18} color="rgba(0, 0, 0, 0.6)" />
-                  <Text
-                    style={{ color: "rgba(0, 0, 0, 0.6)" }}
-                    className="font-medium ml-2"
-                  >
-                    Keep
                   </Text>
                 </Pressable>
               </View>
