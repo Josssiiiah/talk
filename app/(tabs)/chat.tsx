@@ -89,6 +89,9 @@ export default function ChatScreen() {
   const recordingRingScale = useRef(new Animated.Value(0)).current;
   const energyPulse = useRef(new Animated.Value(0)).current;
 
+  // Slow rhythmic background pulse
+  const backgroundPulse = useRef(new Animated.Value(1)).current;
+
   // Simplified transition - just fade between states
   const overlayOpacity = useRef(new Animated.Value(0)).current;
 
@@ -141,6 +144,31 @@ export default function ChatScreen() {
 
   const handleTranscription = async (uri: string) => {
     setIsProcessing(true);
+
+    // Set a timeout to prevent indefinite processing state
+    const timeoutId = setTimeout(async () => {
+      console.log("Processing timeout reached, cleaning up...");
+      setIsProcessing(false);
+
+      // Clean up placeholder note on timeout
+      if (pendingNoteId.current) {
+        try {
+          await deleteVoiceNote({ id: pendingNoteId.current });
+        } catch (deleteError) {
+          console.error(
+            "Failed to delete placeholder note on timeout:",
+            deleteError
+          );
+        }
+        pendingNoteId.current = null;
+      }
+
+      Alert.alert(
+        "Timeout",
+        "Processing took too long and was cancelled. Please try again."
+      );
+    }, 60000); // 60 second timeout
+
     try {
       baselineTodoIds.current = todos.map((t) => t._id);
 
@@ -152,13 +180,30 @@ export default function ChatScreen() {
         noteId: pendingNoteId.current,
         audioBase64: base64Audio,
       });
+
+      // Clear timeout on successful completion
+      clearTimeout(timeoutId);
+
       // Clean up local file async
       setTimeout(() => {
         FileSystem.deleteAsync(uri).catch(console.error);
       }, 1000);
     } catch (error: any) {
+      // Clear timeout on error
+      clearTimeout(timeoutId);
+
       console.error(error);
       Alert.alert("Processing Error", error?.message ?? "Unknown error");
+
+      // Clean up placeholder note if processing failed
+      if (pendingNoteId.current) {
+        try {
+          await deleteVoiceNote({ id: pendingNoteId.current });
+        } catch (deleteError) {
+          console.error("Failed to delete placeholder note:", deleteError);
+        }
+        pendingNoteId.current = null;
+      }
     } finally {
       setIsProcessing(false);
     }
@@ -188,6 +233,11 @@ export default function ChatScreen() {
       pendingNoteId.current = null;
       return;
     }
+
+    // Fallback: if neither voice note nor todo found, reset pendingNoteId
+    // This prevents stale references if something went wrong
+    console.log("Neither voice note nor todo found for pending ID, resetting");
+    pendingNoteId.current = null;
   }, [isProcessing, voiceNotes, todos]);
 
   /* 🎨 Pulse animation for record button */
@@ -197,14 +247,14 @@ export default function ChatScreen() {
       loop = Animated.loop(
         Animated.sequence([
           Animated.timing(pulseAnim, {
-            toValue: 1.3,
-            duration: 700,
+            toValue: 1.4,
+            duration: 600,
             easing: Easing.inOut(Easing.ease),
             useNativeDriver: true,
           }),
           Animated.timing(pulseAnim, {
             toValue: 1,
-            duration: 700,
+            duration: 600,
             easing: Easing.inOut(Easing.ease),
             useNativeDriver: true,
           }),
@@ -229,14 +279,14 @@ export default function ChatScreen() {
         Animated.loop(
           Animated.sequence([
             Animated.timing(recordingPulse, {
-              toValue: 1.6,
-              duration: 400,
+              toValue: 1.8,
+              duration: 350,
               easing: Easing.inOut(Easing.ease),
               useNativeDriver: true,
             }),
             Animated.timing(recordingPulse, {
               toValue: 1,
-              duration: 400,
+              duration: 350,
               easing: Easing.inOut(Easing.ease),
               useNativeDriver: true,
             }),
@@ -266,13 +316,13 @@ export default function ChatScreen() {
           Animated.sequence([
             Animated.timing(energyPulse, {
               toValue: 1,
-              duration: 800,
+              duration: 700,
               easing: Easing.inOut(Easing.ease),
               useNativeDriver: true,
             }),
             Animated.timing(energyPulse, {
               toValue: 0,
-              duration: 800,
+              duration: 700,
               easing: Easing.inOut(Easing.ease),
               useNativeDriver: true,
             }),
@@ -298,6 +348,24 @@ export default function ChatScreen() {
         })
       ).start();
 
+      // Start slow rhythmic background pulse
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(backgroundPulse, {
+            toValue: 1.15,
+            duration: 3000,
+            easing: Easing.inOut(Easing.ease),
+            useNativeDriver: true,
+          }),
+          Animated.timing(backgroundPulse, {
+            toValue: 1,
+            duration: 3000,
+            easing: Easing.inOut(Easing.ease),
+            useNativeDriver: true,
+          }),
+        ])
+      ).start();
+
       recordingAnimations.forEach((anim) => anim.start());
     } else {
       // Reset recording animations
@@ -305,6 +373,7 @@ export default function ChatScreen() {
       waveformScale.setValue(0);
       recordingRingScale.setValue(0);
       energyPulse.setValue(0);
+      backgroundPulse.setValue(1);
     }
   }, [isRecording]);
 
@@ -332,7 +401,7 @@ export default function ChatScreen() {
         Animated.loop(
           Animated.timing(outerRingRotation, {
             toValue: 1,
-            duration: 8000,
+            duration: 7000,
             easing: Easing.linear,
             useNativeDriver: true,
           })
@@ -342,7 +411,7 @@ export default function ChatScreen() {
         Animated.loop(
           Animated.timing(middleRingRotation, {
             toValue: 1,
-            duration: 5000,
+            duration: 4200,
             easing: Easing.linear,
             useNativeDriver: true,
           })
@@ -352,7 +421,7 @@ export default function ChatScreen() {
         Animated.loop(
           Animated.timing(innerRingRotation, {
             toValue: 1,
-            duration: 3000,
+            duration: 2500,
             easing: Easing.linear,
             useNativeDriver: true,
           })
@@ -362,14 +431,14 @@ export default function ChatScreen() {
         Animated.loop(
           Animated.sequence([
             Animated.timing(coreScale, {
-              toValue: 1.4,
-              duration: 1500,
+              toValue: 1.6,
+              duration: 1300,
               easing: Easing.inOut(Easing.ease),
               useNativeDriver: true,
             }),
             Animated.timing(coreScale, {
               toValue: 1,
-              duration: 1500,
+              duration: 1300,
               easing: Easing.inOut(Easing.ease),
               useNativeDriver: true,
             }),
@@ -381,13 +450,13 @@ export default function ChatScreen() {
           Animated.sequence([
             Animated.timing(textGlow, {
               toValue: 1,
-              duration: 2000,
+              duration: 1700,
               easing: Easing.inOut(Easing.ease),
               useNativeDriver: true,
             }),
             Animated.timing(textGlow, {
               toValue: 0,
-              duration: 2000,
+              duration: 1700,
               easing: Easing.inOut(Easing.ease),
               useNativeDriver: true,
             }),
@@ -430,14 +499,14 @@ export default function ChatScreen() {
           Animated.loop(
             Animated.sequence([
               Animated.timing(particle.scale, {
-                toValue: 1,
-                duration: 800,
+                toValue: 1.2,
+                duration: 700,
                 easing: Easing.inOut(Easing.ease),
                 useNativeDriver: true,
               }),
               Animated.timing(particle.scale, {
-                toValue: 0.3,
-                duration: 800,
+                toValue: 0.2,
+                duration: 700,
                 easing: Easing.inOut(Easing.ease),
                 useNativeDriver: true,
               }),
@@ -456,6 +525,24 @@ export default function ChatScreen() {
       // Start main animations
       animations.forEach((anim) => anim.start());
 
+      // Start slow rhythmic background pulse
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(backgroundPulse, {
+            toValue: 1.2,
+            duration: 4000,
+            easing: Easing.inOut(Easing.ease),
+            useNativeDriver: true,
+          }),
+          Animated.timing(backgroundPulse, {
+            toValue: 1,
+            duration: 4000,
+            easing: Easing.inOut(Easing.ease),
+            useNativeDriver: true,
+          }),
+        ])
+      ).start();
+
       // Fade in particles
       Animated.timing(particleOpacity, {
         toValue: 1,
@@ -471,6 +558,7 @@ export default function ChatScreen() {
       textGlow.setValue(0);
       hologramOpacity.setValue(0);
       particleOpacity.setValue(0);
+      backgroundPulse.setValue(1);
 
       particleAnims.forEach((particle) => {
         particle.rotation.setValue(0);
@@ -517,22 +605,27 @@ export default function ChatScreen() {
         {isRecording && (
           <View className="absolute inset-0 items-center justify-center bg-background/95 z-20">
             {/* Expanded recording background animation */}
-            <View className="absolute inset-0">
+            <Animated.View
+              className="absolute inset-0"
+              style={{
+                transform: [{ scale: backgroundPulse }],
+              }}
+            >
               {/* Extended radial lines */}
-              {Array.from({ length: 16 }).map((_, i) => (
+              {Array.from({ length: 20 }).map((_, i) => (
                 <Animated.View
                   key={`line-${i}`}
                   style={{
                     position: "absolute",
                     top: "50%",
                     left: "50%",
-                    width: 1,
-                    height: 300 + (i % 3) * 100, // Varying lengths
-                    marginTop: -(150 + (i % 3) * 50),
-                    marginLeft: -0.5,
+                    width: 1.5,
+                    height: 500 + (i % 3) * 150, // Varying lengths - much longer
+                    marginTop: -(250 + (i % 3) * 75),
+                    marginLeft: -0.75,
                     backgroundColor: `rgba(0, 0, 0, ${0.03 - (i % 3) * 0.005})`,
                     transform: [
-                      { rotate: `${i * 22.5}deg` },
+                      { rotate: `${i * 18}deg` },
                       {
                         scaleY: energyPulse.interpolate({
                           inputRange: [0, 1],
@@ -556,11 +649,11 @@ export default function ChatScreen() {
                     position: "absolute",
                     top: "50%",
                     left: "50%",
-                    width: 600 + i * 300,
-                    height: 600 + i * 300,
-                    marginTop: -(300 + i * 150),
-                    marginLeft: -(300 + i * 150),
-                    borderRadius: 300 + i * 150,
+                    width: 900 + i * 450,
+                    height: 900 + i * 450,
+                    marginTop: -(450 + i * 225),
+                    marginLeft: -(450 + i * 225),
+                    borderRadius: 450 + i * 225,
                     borderWidth: 0.5,
                     borderColor: "rgba(0, 0, 0, 0.015)",
                     opacity: recordingPulse.interpolate({
@@ -570,8 +663,8 @@ export default function ChatScreen() {
                     transform: [
                       {
                         scale: recordingPulse.interpolate({
-                          inputRange: [1, 1.6],
-                          outputRange: [0.9, 1.3 + i * 0.1],
+                          inputRange: [1, 1.8],
+                          outputRange: [0.8, 1.5 + i * 0.1],
                         }),
                       },
                     ],
@@ -602,8 +695,8 @@ export default function ChatScreen() {
                         translateX: energyPulse.interpolate({
                           inputRange: [0, 1],
                           outputRange: [
-                            Math.cos((i * 45 * Math.PI) / 180) * 70,
-                            Math.cos((i * 45 * Math.PI) / 180) * 110,
+                            Math.cos((i * 45 * Math.PI) / 180) * 120,
+                            Math.cos((i * 45 * Math.PI) / 180) * 180,
                           ],
                         }),
                       },
@@ -611,8 +704,8 @@ export default function ChatScreen() {
                         translateY: energyPulse.interpolate({
                           inputRange: [0, 1],
                           outputRange: [
-                            Math.sin((i * 45 * Math.PI) / 180) * 70,
-                            Math.sin((i * 45 * Math.PI) / 180) * 110,
+                            Math.sin((i * 45 * Math.PI) / 180) * 120,
+                            Math.sin((i * 45 * Math.PI) / 180) * 180,
                           ],
                         }),
                       },
@@ -626,7 +719,7 @@ export default function ChatScreen() {
                   }}
                 />
               ))}
-            </View>
+            </Animated.View>
 
             {/* Large tap area - covers most of the screen center */}
             <Pressable
@@ -699,22 +792,27 @@ export default function ChatScreen() {
         {isProcessing && (
           <View className="absolute inset-0 items-center justify-center bg-background/96 z-20">
             {/* Radial geometric transcription background animation */}
-            <View className="absolute inset-0">
+            <Animated.View
+              className="absolute inset-0"
+              style={{
+                transform: [{ scale: backgroundPulse }],
+              }}
+            >
               {/* Radial lines for processing - similar to recording but different timing */}
-              {Array.from({ length: 12 }).map((_, i) => (
+              {Array.from({ length: 16 }).map((_, i) => (
                 <Animated.View
                   key={`process-line-${i}`}
                   style={{
                     position: "absolute",
                     top: "50%",
                     left: "50%",
-                    width: 1.5,
-                    height: 250 + (i % 4) * 75, // Varying lengths
-                    marginTop: -(125 + (i % 4) * 37.5),
-                    marginLeft: -0.75,
+                    width: 2,
+                    height: 400 + (i % 4) * 120, // Varying lengths - much longer
+                    marginTop: -(200 + (i % 4) * 60),
+                    marginLeft: -1,
                     backgroundColor: `rgba(0, 0, 0, ${0.04 - (i % 4) * 0.008})`,
                     transform: [
-                      { rotate: `${i * 30}deg` },
+                      { rotate: `${i * 22.5}deg` },
                       {
                         scaleY: coreScale.interpolate({
                           inputRange: [1, 1.4],
@@ -724,7 +822,10 @@ export default function ChatScreen() {
                       {
                         rotateZ: outerRingRotation.interpolate({
                           inputRange: [0, 1],
-                          outputRange: [`${i * 30}deg`, `${i * 30 + 360}deg`],
+                          outputRange: [
+                            `${i * 22.5}deg`,
+                            `${i * 22.5 + 360}deg`,
+                          ],
                         }),
                       },
                     ],
@@ -759,8 +860,8 @@ export default function ChatScreen() {
                         translateX: hologramOpacity.interpolate({
                           inputRange: [0.2, 0.8],
                           outputRange: [
-                            Math.cos((i * 45 * Math.PI) / 180) * 80,
-                            Math.cos((i * 45 * Math.PI) / 180) * 120,
+                            Math.cos((i * 45 * Math.PI) / 180) * 130,
+                            Math.cos((i * 45 * Math.PI) / 180) * 200,
                           ],
                         }),
                       },
@@ -768,8 +869,8 @@ export default function ChatScreen() {
                         translateY: hologramOpacity.interpolate({
                           inputRange: [0.2, 0.8],
                           outputRange: [
-                            Math.sin((i * 45 * Math.PI) / 180) * 80,
-                            Math.sin((i * 45 * Math.PI) / 180) * 120,
+                            Math.sin((i * 45 * Math.PI) / 180) * 130,
+                            Math.sin((i * 45 * Math.PI) / 180) * 200,
                           ],
                         }),
                       },
@@ -783,7 +884,7 @@ export default function ChatScreen() {
                   }}
                 />
               ))}
-            </View>
+            </Animated.View>
 
             {/* Refined text */}
             <View className="absolute inset-0 items-center justify-center px-8">
