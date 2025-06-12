@@ -1,18 +1,24 @@
 import { Text } from "@/components/ui/text";
 import { useQuery } from "convex/react";
+import { BlurView } from "expo-blur";
 import * as Haptics from "expo-haptics";
 import { ChevronLeft, ChevronRight, Circle } from "lucide-react-native";
-import React, { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Animated,
+  Dimensions,
   Easing,
   LayoutAnimation,
+  PanResponder,
   Platform,
   Pressable,
   SafeAreaView,
   ScrollView,
+  StyleSheet,
   UIManager,
   View,
+  type GestureResponderEvent,
+  type PanResponderGestureState,
 } from "react-native";
 import { api } from "../../convex/_generated/api";
 import { Id } from "../../convex/_generated/dataModel";
@@ -56,6 +62,75 @@ export default function CalendarScreen() {
   const selectedCardSlide = useRef(new Animated.Value(100)).current;
   const selectedCardOpacity = useRef(new Animated.Value(0)).current;
 
+  // Glass bottom-sheet & blur setup --------------------------------------------------
+  const screenHeight = Dimensions.get("window").height;
+  const collapsedHeight = screenHeight * 0.45; // height visible when collapsed
+  const expandedOffset = 80; // distance from top when fully expanded
+
+  // 0 = collapsed, 1 = expanded
+  const sheetAnim = useRef(new Animated.Value(0)).current;
+  const AnimatedBlurView = Animated.createAnimatedComponent(BlurView);
+
+  const [activeTab, setActiveTab] = useState<"all" | "notes" | "tasks">(
+    "all"
+  );
+
+  const startSheetValue = useRef(0);
+  const sheetValueRef = useRef(0);
+
+  // Keep animated value in ref to avoid using private __getValue
+  useEffect(() => {
+    const id = sheetAnim.addListener(({ value }: { value: number }) => {
+      sheetValueRef.current = value;
+    });
+    return () => {
+      sheetAnim.removeListener(id);
+    };
+  }, []);
+
+  const panResponder = useRef(
+    PanResponder.create({
+      onMoveShouldSetPanResponder: (_evt: GestureResponderEvent, g: PanResponderGestureState) =>
+        Math.abs(g.dy) > Math.abs(g.dx),
+      onPanResponderGrant: (_evt: GestureResponderEvent, _g: PanResponderGestureState) => {
+        sheetAnim.stopAnimation((v?: number) => {
+          startSheetValue.current = v ?? 0;
+        });
+      },
+      onPanResponderMove: (_evt: GestureResponderEvent, g: PanResponderGestureState) => {
+        const delta =
+          -g.dy / (screenHeight - collapsedHeight - expandedOffset);
+        let newVal = startSheetValue.current + delta;
+        newVal = Math.min(Math.max(newVal, 0), 1);
+        sheetAnim.setValue(newVal);
+      },
+      onPanResponderRelease: (_evt: GestureResponderEvent, g: PanResponderGestureState) => {
+        const toValue =
+          g.dy < -50
+            ? 1
+            : g.dy > 50
+            ? 0
+            : sheetValueRef.current > 0.5
+            ? 1
+            : 0;
+        Animated.spring(sheetAnim, {
+          toValue,
+          useNativeDriver: true,
+        }).start();
+      },
+    })
+  ).current;
+
+  const sheetTranslateY = sheetAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, -(screenHeight - collapsedHeight - expandedOffset)],
+  });
+
+  const blurOpacity = sheetAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, 1],
+  });
+
   // Convex hooks
   const notes = (useQuery(api.voiceNotes.list) ?? []) as VoiceNote[];
   const todos = (useQuery(api.todos.list) ?? []) as Todo[];
@@ -79,9 +154,9 @@ export default function CalendarScreen() {
 
   // Check if a date has any notes or todos with priority levels
   const hasDataForDate = (date: Date) => {
-    const startOfDay = new Date(date);
+    const startOfDay = new Date(date.getTime());
     startOfDay.setHours(0, 0, 0, 0);
-    const endOfDay = new Date(date);
+    const endOfDay = new Date(date.getTime());
     endOfDay.setHours(23, 59, 59, 999);
 
     const dayNotes = noteOnly.filter((note) => {
@@ -105,9 +180,9 @@ export default function CalendarScreen() {
 
   // Get items for selected date
   const getItemsForDate = (date: Date) => {
-    const startOfDay = new Date(date);
+    const startOfDay = new Date(date.getTime());
     startOfDay.setHours(0, 0, 0, 0);
-    const endOfDay = new Date(date);
+    const endOfDay = new Date(date.getTime());
     endOfDay.setHours(23, 59, 59, 999);
 
     const dayNotes = noteOnly
@@ -158,7 +233,7 @@ export default function CalendarScreen() {
       }),
     ]).start();
 
-    const newMonth = new Date(currentMonth);
+    const newMonth = new Date(currentMonth.getTime());
     if (direction === "next") {
       newMonth.setMonth(newMonth.getMonth() + 1);
     } else {
@@ -293,7 +368,7 @@ export default function CalendarScreen() {
 
   const getRelativeDate = (date: Date) => {
     const today = new Date();
-    const yesterday = new Date(today);
+    const yesterday = new Date(today.getTime());
     yesterday.setDate(yesterday.getDate() - 1);
 
     if (date.toDateString() === today.toDateString()) return "Today";
@@ -471,78 +546,106 @@ export default function CalendarScreen() {
           {/* Enhanced Selected Date Content */}
           {selectedDate && selectedItems && (
             <Animated.View
+              {...panResponder.panHandlers}
               style={{
                 opacity: selectedCardOpacity,
-                transform: [{ translateY: selectedCardSlide }],
+                transform: [
+                  { translateY: Animated.add(selectedCardSlide, sheetTranslateY) },
+                ],
+                position: "absolute",
+                left: 0,
+                right: 0,
+                top: screenHeight - collapsedHeight,
+                height: screenHeight,
               }}
-              className="flex-1 px-6 pt-8 pb-6"
+              className="bg-card/90 border border-border/10 rounded-t-[24px] px-6 pt-8 pb-6 flex-1"
             >
-              <View
-                className="bg-card border border-border/10 rounded-[24px] p-6 flex-1"
-                style={{
-                  shadowColor: "#000",
-                  shadowOffset: { width: 0, height: 4 },
-                  shadowOpacity: 0.08,
-                  shadowRadius: 16,
-                  elevation: 4,
-                }}
-              >
-                {/* Enhanced Date Header */}
-                <View className="flex-row items-center justify-between mb-6">
-                  <View>
-                    <Text className="text-[17px] font-semibold text-foreground mb-1">
-                      {getRelativeDate(selectedDate)}
-                    </Text>
-                    <Text className="text-[13px] text-muted-foreground/60 font-medium">
-                      {selectedItems.notes.length + selectedItems.todos.length}{" "}
-                      items
-                    </Text>
-                  </View>
-
-                  {/* Quick stats */}
-                  <View className="flex-row space-x-3">
-                    {selectedItems.notes.length > 0 && (
-                      <View className="bg-blue-50 px-3 py-1.5 rounded-full">
-                        <Text className="text-[12px] font-medium text-blue-600">
-                          {selectedItems.notes.length} note
-                          {selectedItems.notes.length !== 1 ? "s" : ""}
-                        </Text>
-                      </View>
-                    )}
-                    {selectedItems.todos.length > 0 && (
-                      <View className="bg-green-50 px-3 py-1.5 rounded-full">
-                        <Text className="text-[12px] font-medium text-green-600">
-                          {selectedItems.todos.length} task
-                          {selectedItems.todos.length !== 1 ? "s" : ""}
-                        </Text>
-                      </View>
-                    )}
-                  </View>
+              <View className="flex-row items-center justify-between mb-6">
+                <View>
+                  <Text className="text-[17px] font-semibold text-foreground mb-1">
+                    {getRelativeDate(selectedDate)}
+                  </Text>
+                  <Text className="text-[13px] text-muted-foreground/60 font-medium">
+                    {selectedItems.notes.length + selectedItems.todos.length}{" "}
+                    items
+                  </Text>
                 </View>
 
-                {/* Enhanced Content List */}
-                <ScrollView
-                  showsVerticalScrollIndicator={false}
-                  className="flex-1"
-                  contentContainerStyle={{ paddingBottom: 8 }}
-                >
-                  {selectedItems.notes.length === 0 &&
-                  selectedItems.todos.length === 0 ? (
-                    <View className="flex-1 items-center justify-center py-12">
-                      <View className="w-16 h-16 bg-muted/20 rounded-full items-center justify-center mb-4">
-                        <Circle size={24} color="rgba(0, 0, 0, 0.2)" />
-                      </View>
-                      <Text className="text-muted-foreground/60 text-center text-[15px] font-medium">
-                        No items for this day
-                      </Text>
-                      <Text className="text-muted-foreground/40 text-center text-[13px] mt-1">
-                        Voice notes and tasks will appear here
+                {/* Quick stats */}
+                <View className="flex-row space-x-3">
+                  {selectedItems.notes.length > 0 && (
+                    <View className="bg-blue-50 px-3 py-1.5 rounded-full">
+                      <Text className="text-[12px] font-medium text-blue-600">
+                        {selectedItems.notes.length} note
+                        {selectedItems.notes.length !== 1 ? "s" : ""}
                       </Text>
                     </View>
-                  ) : (
-                    <>
-                      {/* Enhanced Notes */}
-                      {selectedItems.notes.map((note, index) => (
+                  )}
+                  {selectedItems.todos.length > 0 && (
+                    <View className="bg-green-50 px-3 py-1.5 rounded-full">
+                      <Text className="text-[12px] font-medium text-green-600">
+                        {selectedItems.todos.length} task
+                        {selectedItems.todos.length !== 1 ? "s" : ""}
+                      </Text>
+                    </View>
+                  )}
+                </View>
+              </View>
+
+              {/* Tabs to filter content */}
+              <View className="flex-row bg-muted/20 rounded-full mx-auto mb-4">
+                {["All", "Notes", "Tasks"].map((label) => {
+                  const key = label.toLowerCase();
+                  const active = activeTab === key;
+                  return (
+                    <Pressable
+                      key={key}
+                      onPress={() =>
+                        setActiveTab(key as "all" | "notes" | "tasks")
+                      }
+                      className={`px-4 py-1.5 rounded-full ${
+                        active ? "bg-foreground" : ""
+                      }`}
+                    >
+                      <Text
+                        className={`text-[13px] font-medium ${
+                          active ? "text-background" : "text-muted-foreground"
+                        }`}
+                      >
+                        {label}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+
+              {/* Enhanced Content List */}
+              <ScrollView
+                showsVerticalScrollIndicator={false}
+                className="flex-1"
+                contentContainerStyle={{ paddingBottom: 8 }}
+              >
+                {(activeTab === "notes" && selectedItems.notes.length === 0) ||
+                (activeTab === "tasks" && selectedItems.todos.length === 0) ||
+                (activeTab === "all" &&
+                  selectedItems.notes.length === 0 &&
+                  selectedItems.todos.length === 0) ? (
+                  <View className="flex-1 items-center justify-center py-12">
+                    <View className="w-16 h-16 bg-muted/20 rounded-full items-center justify-center mb-4">
+                      <Circle size={24} color="rgba(0, 0, 0, 0.2)" />
+                    </View>
+                    <Text className="text-muted-foreground/60 text-center text-[15px] font-medium">
+                      No items for this day
+                    </Text>
+                    <Text className="text-muted-foreground/40 text-center text-[13px] mt-1">
+                      Voice notes and tasks will appear here
+                    </Text>
+                  </View>
+                ) : (
+                  <>
+                    {/* Enhanced Notes */}
+                    {(activeTab === "all" || activeTab === "notes") &&
+                      selectedItems.notes.map((note) => (
                         <View
                           key={note._id}
                           className="mb-5 p-4 bg-blue-50/50 rounded-2xl border border-blue-100/50"
@@ -559,8 +662,9 @@ export default function CalendarScreen() {
                         </View>
                       ))}
 
-                      {/* Enhanced Todos */}
-                      {selectedItems.todos.map((todo, index) => (
+                    {/* Enhanced Todos */}
+                    {(activeTab === "all" || activeTab === "tasks") &&
+                      selectedItems.todos.map((todo) => (
                         <View
                           key={todo._id}
                           className="mb-5 p-4 bg-green-50/50 rounded-2xl border border-green-100/50"
@@ -596,12 +700,19 @@ export default function CalendarScreen() {
                           </View>
                         </View>
                       ))}
-                    </>
-                  )}
-                </ScrollView>
-              </View>
+                  </>
+                )}
+              </ScrollView>
             </Animated.View>
           )}
+
+          {/* Glass blur when sheet expands */}
+          <AnimatedBlurView
+            intensity={50}
+            tint="light"
+            pointerEvents="none"
+            style={[StyleSheet.absoluteFill, { opacity: blurOpacity, zIndex: 10 }]}
+          />
         </Animated.View>
       </SafeAreaView>
     </View>
