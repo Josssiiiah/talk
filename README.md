@@ -49,3 +49,23 @@ Join our community of developers creating universal apps.
 - [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
 - [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
 # talk
+
+## Project-specific setup
+
+This project uses Bun for dependency management.
+
+```bash
+# 1. Install runtime / UI deps
+bun add expo-blur
+
+# 2. Install TypeScript helper packages (dev-only)
+bun add -d @types/react @types/expo__haptics @types/lucide-react-native
+```
+
+After installing, restart the TypeScript language service / Metro bundler:
+
+```bash
+bun run start    # or `npm run start` if you use npm
+```
+
+The calendar screen now features a swipe-up glass bottom-sheet; the calendar underneath will blur when the sheet is expanded.
